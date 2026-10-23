@@ -27,7 +27,19 @@ function inputs() {
           dist_mrt: distFromSlider(+$("dist_mrt").value), n_stores: +$("n_stores").value, latitude: loc[0], longitude: loc[1]};
 }
 const fmt = (v, d = 1) => v.toLocaleString("en-US", {minimumFractionDigits: d, maximumFractionDigits: d});
-let median;
+const IMPORTANCE = [["log distance to MRT", 2.768], ["distance to MRT", 2.686], ["house age", 1.698], ["latitude", 0.872],
+  ["distance to Taipei Main Stn", 0.530], ["longitude", 0.403], ["convenience stores", 0.102], ["transaction date", 0.081]];
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let median, shown = null, anim;
+function countTo(v) {
+  const el = $("price"); cancelAnimationFrame(anim);
+  if (shown === null || reduced) { shown = v; el.textContent = fmt(v); return; }
+  const from = shown, t0 = performance.now(), dur = 450;
+  const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = fmt(from + (v - from) * e); if (k < 1) anim = requestAnimationFrame(step); else { shown = v; el.textContent = fmt(v); } };
+  anim = requestAnimationFrame(step);
+}
+function fill(i) { i.style.setProperty("--p", ((i.value - i.min) / (i.max - i.min) * 100) + "%"); }
 function render() {
   const r = inputs(), p = predict(r), size = +$("size").value;
   $("o-house_age").textContent = r.house_age.toFixed(1) + " yr";
@@ -35,7 +47,9 @@ function render() {
   $("o-n_stores").textContent = r.n_stores;
   $("o-transaction_date").textContent = MONTHS[+$("transaction_date").value];
   $("o-size").textContent = size + " ping"; $("sizeLbl").textContent = size;
-  $("price").textContent = fmt(p.point);
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-checked", +b.dataset.v === size));
+  document.querySelectorAll("input[type=range]").forEach(fill);
+  countTo(p.point);
   $("interval").textContent = `${fmt(p.lo)} – ${fmt(p.hi)}`;
   $("perm2").textContent = "NT$ " + Math.round(p.point * 1e4 / PING_M2).toLocaleString();
   $("total").textContent = "NT$ " + fmt(p.point * size / 100, 2) + " M";
@@ -43,30 +57,52 @@ function render() {
   const sc = v => Math.min(100, Math.max(0, v / 120 * 100));
   $("band").style.left = sc(p.lo) + "%"; $("band").style.width = (sc(p.hi) - sc(p.lo)) + "%"; $("dot").style.left = sc(p.point) + "%";
 }
+function drawImportance() {
+  const mx = IMPORTANCE[0][1], box = $("impChart");
+  box.innerHTML = IMPORTANCE.map(([n, v]) => `<div class="imp-row"><span>${n}</span><span class="t"><i data-w="${v / mx * 100}"></i></span><b>${v.toFixed(2)}</b></div>`).join("");
+  requestAnimationFrame(() => box.querySelectorAll("i").forEach(i => { i.style.width = i.dataset.w + "%"; }));
+}
 
-function color(v) { const t = Math.min(1, Math.max(0, (v - 10) / 60)); return `hsl(${220 - 220 * t} 80% 50%)`; }
+function color(v) { const t = Math.min(1, Math.max(0, (v - 10) / 60)); return `hsl(${168 - 164 * t} ${62 + 10 * t}% ${42 + 10 * t}%)`; }
+// Esri Canvas basemaps: free, no API key; attribution required.
+const ESRI = "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_", TAIL = "/MapServer/tile/{z}/{y}/{x}";
+const ATTR = 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+let tiles, map;
+function setTiles(theme) {
+  if (!map) return; if (tiles) map.removeLayer(tiles);
+  const k = theme === "dark" ? "Dark_Gray" : "Light_Gray";
+  tiles = L.layerGroup([L.tileLayer(ESRI + k + "_Base" + TAIL, {maxZoom: 16, attribution: ATTR}),
+                        L.tileLayer(ESRI + k + "_Reference" + TAIL, {maxZoom: 16})]).addTo(map);
+  tiles.eachLayer(l => l.bringToBack());
+}
 function initMap() {
-  const map = L.map("map", {scrollWheelZoom: false}).fitBounds(BOUNDS, {padding: [20, 20]});
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 18,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
-  L.rectangle(BOUNDS, {color: "#4f46e5", weight: 1, fill: false, dashArray: "4"}).addTo(map);
-  data.forEach(r => L.circleMarker([r[4], r[5]], {radius: 4, weight: 0, fillOpacity: .75, fillColor: color(r[6])})
+  map = L.map("map", {scrollWheelZoom: false}).fitBounds(BOUNDS, {padding: [20, 20]});
+  setTiles(document.documentElement.dataset.theme);
+  L.rectangle(BOUNDS, {color: "#e0b252", weight: 1, fill: false, dashArray: "4"}).addTo(map);
+  data.forEach(r => L.circleMarker([r[4], r[5]], {radius: 5, weight: 1, color: "rgba(0,0,0,.35)", fillOpacity: .85, fillColor: color(r[6])})
     .bindTooltip(`${r[6]} × 10k NT$/ping`).addTo(map));
-  marker = L.marker(loc, {draggable: true, keyboard: true, title: "Property location"}).addTo(map);
+  marker = L.marker(loc, {draggable: true, keyboard: true, title: "Property location",
+    icon: L.divIcon({className: "", html: '<div class="pin"></div>', iconSize: [22, 22], iconAnchor: [11, 11]})}).addTo(map);
   const clamp = ll => [Math.min(BOUNDS[1][0], Math.max(BOUNDS[0][0], ll.lat)), Math.min(BOUNDS[1][1], Math.max(BOUNDS[0][1], ll.lng))];
   const set = ll => { loc = clamp(ll); marker.setLatLng(loc); render(); };
   map.on("click", e => set(e.latlng)); marker.on("dragend", () => set(marker.getLatLng()));
 }
 
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  $("theme").firstElementChild.textContent = t === "dark" ? "☾" : "☀";
+  $("theme").setAttribute("aria-label", t === "dark" ? "Switch to light mode" : "Switch to dark mode");
+  document.querySelector('meta[name=theme-color]').content = t === "dark" ? "#0b1416" : "#f6f1e8";
+  setTiles(t);
+}
 $("theme").addEventListener("click", () => {
-  const dark = document.documentElement.dataset.theme !== "dark";
-  document.documentElement.dataset.theme = dark ? "dark" : "light"; $("theme").textContent = dark ? "☀️" : "🌙";
-  localStorage.setItem("theme", dark ? "dark" : "light");
+  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; localStorage.setItem("theme", t); applyTheme(t);
 });
-if ((localStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark") $("theme").click();
+applyTheme(localStorage.getItem("theme") || "dark");
 document.querySelectorAll("input[type=range]").forEach(i => i.addEventListener("input", render));
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { $("size").value = b.dataset.v; render(); }));
 
 Promise.all([fetch("model.json").then(r => r.json()), fetch("data.json").then(r => r.json())]).then(([m, d]) => {
   model = m; data = d; const s = d.map(r => r[6]).sort((a, b) => a - b); median = (s[206] + s[207]) / 2;
-  initMap(); render(); document.body.dataset.ready = "1";
+  initMap(); render(); drawImportance(); document.body.dataset.ready = "1";
 });

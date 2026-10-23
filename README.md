@@ -7,13 +7,13 @@
 ![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB?logo=python&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.9.1-F7931E?logo=scikitlearn&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.161-009688?logo=fastapi&logoColor=white)
-![Leaflet](https://img.shields.io/badge/map-Leaflet%20%2B%20OpenStreetMap-199900?logo=leaflet&logoColor=white)
+![Leaflet](https://img.shields.io/badge/map-Leaflet%20%2B%20Esri%20Canvas%20%2F%20OSM-1fb59a?logo=leaflet&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-0ea5e9)
 
 **[▶ Open the live demo](https://rishabh-bgp.github.io/real-estate-valuation-taiwan/)**
 
-<img src="docs/img/demo-light.png" alt="Screenshot of the Taiwan real estate valuation web app: OpenStreetMap map of Xindian with recorded sales coloured by price, property sliders, and an estimate of 37.5 × 10,000 NT$ per ping with a quantile range" width="900"/>
+<img src="docs/img/demo-dark.png" alt="Screenshot of the redesigned Taiwan real estate valuation app (dark mode): bento-grid dashboard with original Taipei skyline, temple-roof and lantern line art, a dark map of Xindian with sales coloured jade to cinnabar, an estimate of 37.5 × NT$10,000 per ping with a range bar, sliders and a feature-importance chart" width="900"/>
 
 </div>
 
@@ -22,7 +22,7 @@ A complete **machine learning regression project** that predicts **house price p
 analysis, feature engineering (log distance to MRT, distance to Taipei Main Station), **repeated K-fold
 cross-validation** of linear, ridge, random-forest and gradient-boosting models, log-target and outlier-robust (Huber)
 training, permutation importance, quantile prediction ranges, a **FastAPI** REST API, **Docker**, **pytest**, **GitHub
-Actions CI** and a modern **glassmorphism / bento** web app on **GitHub Pages** where the gradient-boosted trees run
+Actions CI** and a modern **bento-grid dashboard** web app (dark mode by default, light toggle, Taipei-inspired jade / cinnabar / gold palette, original lotus, temple-roof, lantern and skyline line art, Traditional Chinese labels) on **GitHub Pages** where the gradient-boosted trees run
 entirely in your browser.
 
 ## 🎓 About this project
@@ -66,7 +66,7 @@ Repeated 5-fold cross-validation (5 repeats = 25 folds), all 414 sales, metrics 
   1.698, latitude 0.872, distance to Taipei Main Station 0.530, longitude 0.403, convenience stores 0.102, transaction
   date 0.081.
 * **Browser ↔ Python parity:** on the live site, JavaScript predictions match scikit-learn for all 414 sales
-  (max |Δ| ≈ 7 × 10⁻¹³ for the point and both quantile models).
+  (max |Δ| ≈ 6.7 × 10⁻¹³ for the point and both quantile models; re-verified after the October 2026 UI redesign, which left the model and inference code unchanged).
 
 Details: [docs/results.md](docs/results.md).
 
@@ -140,7 +140,7 @@ Yeh, I-C. & Hsu, T-K. (2018). Building real estate valuation models with compara
 reasoning. *Applied Soft Computing*, 65, 260–271. Dataset: UCI Machine Learning Repository, doi:10.24432/C5J30W (CC BY 4.0).
 
 ## ⚖️ Licence
-Code and docs: MIT © 2026 Rishabh Aryan. Data: CC BY 4.0 (see above). Map tiles © OpenStreetMap contributors.
+Code and docs: MIT © 2026 Rishabh Aryan. Data: CC BY 4.0 (see above). Map tiles © Esri (Canvas basemaps, no API key), map data © OpenStreetMap contributors and others.
 
 ## 🏠 Real Estate ML Trilogy
 
